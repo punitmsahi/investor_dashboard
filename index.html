@@ -117,7 +117,7 @@
     max-width: 15ch;
   }
   .hero-sub {
-    font-size: 1.18rem; color: var(--ink-muted); max-width: 62ch; margin: 0 0 40px;
+    font-size: 1.18rem; color: var(--ink-muted); max-width: 98ch; margin: 0 0 40px;
     line-height: 1.65;
   }
   .hero-sub strong { color: var(--ink); font-weight: 600; }
@@ -131,11 +131,11 @@
   .proof-label { font-size: 13px; color: var(--ink-muted); line-height: 1.5; }
 
   .stat-row {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
+    display: grid; grid-template-columns: 0.72fr 2.2fr 0.72fr 0.86fr; gap: 1px;
     background: var(--border); border: 1px solid var(--border); border-radius: 4px;
     overflow: hidden; box-shadow: var(--shadow);
   }
-  @media (max-width: 780px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 780px) { .stat-row { grid-template-columns: repeat(2, 1fr); } .hero-return-cell { grid-column: span 2; } }
   .stat-cell { background: var(--surface); padding: 22px 22px 20px; }
   .stat-cell .k {
     font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.06em;
@@ -148,18 +148,19 @@
   .stat-cell .v.gain { color: var(--gain); }
   .stat-cell .d { font-size: 12.5px; color: var(--ink-faint); margin-top: 6px; }
 
-  .hero-return-cell { display: flex; align-items: center; gap: 26px; }
-  .hero-return-primary { flex: 1 1 42%; min-width: 150px; }
+  .hero-return-cell { display: flex; align-items: center; gap: 30px; }
+  .hero-return-primary { flex: 1 1 32%; min-width: 150px; }
   .hero-return-margin {
-    flex: 1 1 56%; padding-left: 26px; border-left: 1px solid var(--border);
+    flex: 1 1 68%; padding-left: 30px; border-left: 1px solid var(--border);
     display: flex; flex-direction: column; justify-content: center;
   }
   .hero-return-margin-label {
     font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: 0.06em;
     text-transform: uppercase; color: var(--ink-faint); margin-bottom: 10px;
   }
-  .hero-return-margin-row { display: flex; gap: 30px; }
-  .hero-return-margin-sub .v { font-size: 1.6rem; }
+  .hero-return-margin-row { display: flex; gap: 24px; }
+  .hero-return-margin-sub { min-width: 118px; }
+  .hero-return-margin-sub .v { font-size: 1.6rem; white-space: nowrap; }
   @media (max-width: 900px) {
     .hero-return-cell { flex-direction: column; align-items: stretch; gap: 16px; }
     .hero-return-margin { padding-left: 0; padding-top: 16px; border-left: none; border-top: 1px solid var(--border); }
@@ -168,7 +169,7 @@
   /* ---------- Sections ---------- */
   section.block { padding: 68px 0; border-bottom: 1px solid var(--border); }
   section.block:last-of-type { border-bottom: none; }
-  .block-head { max-width: 74ch; margin-bottom: 34px; }
+  .block-head { max-width: 94ch; margin-bottom: 34px; }
   .block-num {
     font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
     color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px;
@@ -381,7 +382,7 @@
           <div class="v" id="hero-track-val">7.2 yrs</div>
           <div class="d" id="hero-track-range">Jul 2019 &ndash; Sep 2026</div>
         </div>
-        <div class="stat-cell hero-return-cell" style="grid-column: span 2;">
+        <div class="stat-cell hero-return-cell">
           <div class="hero-return-primary">
             <div class="k">Cumulative return</div>
             <div class="v gain" id="hero-cumret">+38.6%</div>
