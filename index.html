@@ -636,6 +636,57 @@
     </div>
 
     <div class="panel" style="margin-top:20px;">
+      <div class="panel-head"><h3>Entry-fill sensitivity &mdash; a slower, more averaged fill</h3></div>
+      <p style="margin:14px 0 0; color:var(--ink-muted); font-size:0.98rem; line-height:1.65;">
+      The base case fills every entry at the next bar's own open print &mdash; the earliest
+      real, achievable price, but a single idealized tick. As a robustness check, every entry
+      across the full 7+ year history was instead re-priced at the volume-weighted average
+      price of that same bar's first five minutes &mdash; a slower, more averaged fill that no
+      longer assumes a perfect execution at the very first print. The 0.10% impact-cost
+      assumption already deducted throughout this page is layered on top of this test exactly
+      as it is everywhere else, not removed &mdash; so the figures below combine two separate,
+      independently conservative execution assumptions, not one. Signal generation, stop-loss
+      and trailing-stop logic, and exit pricing are completely unchanged; only the entry price
+      moves.
+      </p>
+      <div class="basis-key" style="margin-top:14px;">
+        <span class="item"><span class="swatch" style="background:var(--steel)"></span>Base case &mdash; next-bar open</span>
+        <span class="item"><span class="swatch" style="background:var(--chart-gold)"></span>Sensitivity &mdash; next-5-minute VWAP</span>
+      </div>
+      <div class="split-grid">
+        <div class="split-card">
+          <div class="k">Net P&amp;L, full 7.2 years</div>
+          <div class="split-bars">
+            <div class="sb-row"><span class="sb-label">Base case</span><div class="sb-track"><div class="sb-fill dev" style="width:100%"></div></div><span class="sb-val">&#8377;11.52 cr</span></div>
+            <div class="sb-row"><span class="sb-label">5-min VWAP</span><div class="sb-track"><div class="sb-fill ho" style="width:97.8%"></div></div><span class="sb-val">&#8377;11.27 cr</span></div>
+          </div>
+        </div>
+        <div class="split-card">
+          <div class="k">Sharpe ratio</div>
+          <div class="split-bars">
+            <div class="sb-row"><span class="sb-label">Base case</span><div class="sb-track"><div class="sb-fill dev" style="width:100%"></div></div><span class="sb-val">1.05</span></div>
+            <div class="sb-row"><span class="sb-label">5-min VWAP</span><div class="sb-track"><div class="sb-fill ho" style="width:97.1%"></div></div><span class="sb-val">1.02</span></div>
+          </div>
+        </div>
+        <div class="split-card">
+          <div class="k">Return on exposure</div>
+          <div class="split-bars">
+            <div class="sb-row"><span class="sb-label">Base case</span><div class="sb-track"><div class="sb-fill dev" style="width:100%"></div></div><span class="sb-val">5.50%</span></div>
+            <div class="sb-row"><span class="sb-label">5-min VWAP</span><div class="sb-track"><div class="sb-fill ho" style="width:97.5%"></div></div><span class="sb-val">5.36%</span></div>
+          </div>
+        </div>
+        <div class="split-card">
+          <div class="k">Return on margin</div>
+          <div class="split-bars">
+            <div class="sb-row"><span class="sb-label">Base case</span><div class="sb-track"><div class="sb-fill dev" style="width:100%"></div></div><span class="sb-val">27.50%</span></div>
+            <div class="sb-row"><span class="sb-label">5-min VWAP</span><div class="sb-track"><div class="sb-fill ho" style="width:97.5%"></div></div><span class="sb-val">26.81%</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel-note" style="margin-top:14px;">Sortino ticks down slightly (1.64 &rarr; 1.60) and max drawdown edges up (4.7% &rarr; 4.8% on exposure; 23.7% &rarr; 24.0% on margin) under the slower fill. The change is modest and uniform across every slice tested (optimized and standard sizing, development and held-out windows) &mdash; the edge does not depend on an idealized entry price. Figures for the full 7.2-year history; not affected by the performance-window selector above.</div>
+    </div>
+
+    <div class="panel" style="margin-top:20px;">
       <div class="panel-head">
         <h3>Daily exposure carried &mdash; end of day</h3>
         <span class="fig" id="eod-exp-fig">&mdash;</span>
