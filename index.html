@@ -253,6 +253,16 @@
   .period-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin: 0 0 36px; box-shadow: var(--shadow); }
   .period-bar-inner { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .period-bar-label { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); white-space: nowrap; }
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 8px; margin-left: auto;
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    padding: 9px 16px; border: 1px solid var(--border-strong); border-radius: 8px;
+    background: var(--surface); color: var(--navy); cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .export-btn:hover { background: var(--navy-soft); border-color: var(--navy); }
+  .export-btn svg { width: 14px; height: 14px; flex: none; }
+
 
   .scenario-chip {
     font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em;
@@ -337,6 +347,7 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <div class="page">
 
@@ -436,6 +447,10 @@
         <button type="button" class="active" data-period="full" id="period-toggle-full">Full period</button>
       </div>
       <span class="toggle-note">Reflows every return, risk, and trade-composition figure on this page to the trailing window selected. The out-of-sample validation split and the VWAP gap-refinement disclosure always reflect the complete history.</span>
+      <button type="button" class="export-btn" id="export-xlsx-btn" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+        Download data (.xlsx)
+      </button>
     </div>
   </div>
 
@@ -1783,6 +1798,132 @@ var SECTOR_NAMES = ["Automobiles & Components","Banks","Capital Goods","Commerci
     var el = document.getElementById('period-toggle-' + p.key);
     if (el) el.addEventListener('click', function () { applyPeriod(p.key); });
   });
+
+  /* ---------------- Excel export (2026-09-10, per user) ---------------- */
+  // Two different runtimes host this same page: inside a Claude Artifacts viewer, a plain
+  // browser-triggered download is inert (sandboxed) -- the `downloads` capability must be used
+  // instead. Served from any other host (this page's own GitHub Pages deployment, a saved local
+  // copy, etc.), window.claude does not exist at all -- a classic Blob + <a download> works fine
+  // there, and IS the only option there. Feature-detect once at load, never assume either path.
+  var IS_CLAUDE_HOST = typeof window.claude !== "undefined" && typeof window.claude.use === "function";
+  var downloadsCapability = null;
+  if (IS_CLAUDE_HOST) {
+    window.claude.use("downloads").then(function (d) {
+      downloadsCapability = d;
+      var btn = document.getElementById("export-xlsx-btn");
+      if (btn) btn.hidden = !d;
+    }).catch(function () {
+      var btn = document.getElementById("export-xlsx-btn");
+      if (btn) btn.hidden = true;
+    });
+  }
+
+  function aoaSheet(rows) { return XLSX.utils.aoa_to_sheet(rows); }
+
+  function buildWorkbook() {
+    var s = PERIOD_STATE;
+    var wb = XLSX.utils.book_new();
+
+    var summary = [
+      ["Strategy performance export"],
+      ["Performance window", currentPeriodKey === "full" ? "Full period" : periodOpt(currentPeriodKey).long],
+      ["Date range", PERIOD_STATE.daily[0][0] + " to " + PERIOD_STATE.daily[PERIOD_STATE.daily.length - 1][0]],
+      ["Capital base (INR)", 250000000],
+      [],
+      ["", "Including impact cost", "Excluding impact cost"],
+      ["Annualized return, on exposure", s.risk.with.annRetExp, s.risk.without.annRetExp],
+      ["Annualized return, on margin", s.risk.with.annRetMgn, s.risk.without.annRetMgn],
+      ["Annualized volatility, on exposure", s.risk.with.volExp, s.risk.without.volExp],
+      ["Annualized volatility, on margin", s.risk.with.volMgn, s.risk.without.volMgn],
+      ["Sharpe ratio", s.risk.with.sharpe, s.risk.without.sharpe],
+      ["Sortino ratio", s.risk.with.sortino, s.risk.without.sortino],
+      ["Max drawdown, on exposure", s.risk.with.maxddExp, s.risk.without.maxddExp],
+      ["Max drawdown, on margin", s.risk.with.maxddMgn, s.risk.without.maxddMgn],
+      [],
+      ["Gross P&L (INR)", s.waterfall.gross],
+      ["Transaction cost (INR)", s.waterfall.txn],
+      ["Impact cost (INR)", s.waterfall.impact],
+      ["Net P&L, including impact cost (INR)", s.waterfall.net],
+      ["Net P&L, excluding impact cost (INR)", s.waterfall.netNoImpact],
+      ["Gross turnover (INR)", s.turnover],
+      [],
+      ["Total trades", s.payoff.totalTrades],
+      ["Trades profitable (%)", s.payoff.totalTrades ? (s.payoff.winCount / s.payoff.totalTrades * 100) : 0],
+      ["Average winner (INR)", s.payoff.avgWin],
+      ["Average loser (INR)", s.payoff.avgLoss],
+      ["Long entries", s.direction.longCount],
+      ["Short entries", s.direction.shortCount],
+      ["Instruments traded", s.instrumentsTraded],
+      ["Sectors represented", s.sectorsRepresented],
+      [],
+      ["Strategy vs. NIFTY 50 (exposure basis, incl. impact cost)", "Strategy", "NIFTY 50"],
+      ["Cumulative return (%)", s.monthly.exposure_with.length ? s.monthly.exposure_with[s.monthly.exposure_with.length - 1][1] : 0, s.nifty.cumTotal],
+      ["Annualized volatility (%)", parseFloat(s.risk.with.volExp), s.nifty.vol],
+      ["Sharpe ratio", parseFloat(s.risk.with.sharpe), s.nifty.sharpe],
+      ["Max drawdown (%)", parseFloat(s.risk.with.maxddExp), s.nifty.maxDd],
+      ["Correlation of daily returns", s.nifty.corr],
+    ];
+    XLSX.utils.book_append_sheet(wb, aoaSheet(summary), "Summary");
+
+    var monthly = [["Month", "Cum. Return % (Exposure, incl. impact)", "Drawdown % (Exposure)",
+      "Cum. Return % (Exposure, excl. impact)", "Cum. Return % (Margin, incl. impact)",
+      "Cum. Return % (Margin, excl. impact)", "Cum. Return % (NIFTY 50)", "Net P&L (INR)", "Monthly Return %"]];
+    var mExpWith = s.monthly.exposure_with, mExpNo = s.monthly.exposure_without;
+    var mMgnWith = s.monthly.margin_with, mMgnNo = s.monthly.margin_without, mNifty = s.monthly.nifty;
+    var mPnl = s.monthlyPnl;
+    for (var i = 0; i < mExpWith.length; i++) {
+      monthly.push([
+        mExpWith[i][0], mExpWith[i][1], mExpWith[i][2],
+        mExpNo[i] ? mExpNo[i][1] : "", mMgnWith[i] ? mMgnWith[i][1] : "", mMgnNo[i] ? mMgnNo[i][1] : "",
+        mNifty[i] ? mNifty[i][1] : "", mPnl[i] ? mPnl[i][1] : "", mPnl[i] ? mPnl[i][2] : "",
+      ]);
+    }
+    XLSX.utils.book_append_sheet(wb, aoaSheet(monthly), "Monthly Returns");
+
+    var eod = [["Date", "Long (INR)", "Short (INR)", "Net (INR)", "GMV (INR)"]].concat(s.eod);
+    XLSX.utils.book_append_sheet(wb, aoaSheet(eod), "Daily Exposure (EOD)");
+    var peak = [["Date", "Long (INR)", "Short (INR)", "Net (INR)", "GMV (INR)"]].concat(s.peak);
+    XLSX.utils.book_append_sheet(wb, aoaSheet(peak), "Daily Exposure (Peak)");
+
+    var sectors = [["Sector", "Trade count"]].concat(s.sectors);
+    XLSX.utils.book_append_sheet(wb, aoaSheet(sectors), "Sector Breakdown");
+
+    var duration = [["Holding period", "Trade count", "Net P&L (INR crore)"]].concat(
+      s.duration.map(function (d) { return [d.label, d.count, d.pnl / 1e7]; }));
+    XLSX.utils.book_append_sheet(wb, aoaSheet(duration), "Duration Buckets");
+
+    return wb;
+  }
+
+  function exportToExcel() {
+    var wb = buildWorkbook();
+    var wbArray = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    var suffix = currentPeriodKey === "full" ? "full-period" : currentPeriodKey;
+    var filename = "strategy-performance-" + suffix + ".xlsx";
+
+    if (IS_CLAUDE_HOST) {
+      if (!downloadsCapability) return;
+      downloadsCapability.save({ filename: filename, data: wbArray }).catch(function (err) {
+        console.warn("Export declined or failed:", err && err.code);
+      });
+      return;
+    }
+    var blob = new Blob([wbArray], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  var exportBtn = document.getElementById("export-xlsx-btn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", exportToExcel);
+    // Starts `hidden` in the markup (avoids a flash on the Claude-host path, where visibility
+    // waits on the capability promise above); the non-Claude-host path (this page's own GitHub
+    // Pages deployment, a saved copy, etc.) can always do a plain Blob download, so show it now.
+    if (!IS_CLAUDE_HOST) exportBtn.hidden = false;
+  }
 
   applyPeriod('full');
 
